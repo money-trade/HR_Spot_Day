@@ -63,13 +63,10 @@ class App(tk.Tk):
         grid.columnconfigure((0, 1), weight=1)
         grid.rowconfigure((0, 1), weight=1)
 
-        # ใช้ผลที่ ga_grouping.py คำนวณไว้ตอน import ถ้าไม่มีก็รันใหม่
-        self.history, self.running, self.gen = [], False, ga.GENERATIONS
-        if hasattr(ga, "best"):
-            self.best = ga.best.copy()
-        else:
-            self.best = ga.random_individual()
-            self.after(100, self.start)
+        # เปิดหน้าต่างแล้วเริ่มรัน GA ทันที (import ga_grouping ไม่ได้รัน GA ให้ล่วงหน้าแล้ว)
+        self.history, self.running, self.gen = [], False, 0
+        self.best = ga.random_individual()
+        self.after(100, self.start)
 
     # ---------- รัน GA (ลูปเดียวกับ ga_grouping.py) ทีละ 5 รุ่น ให้หน้าจอไม่ค้าง
     def start(self):
@@ -89,10 +86,7 @@ class App(tk.Tk):
                 self.running = False
                 self.btn.config(state="normal")
                 break
-            elite = self.pop[np.argsort(c)[:ga.ELITE]]
-            children = [ga.mutate(ga.crossover(ga.pick(self.pop, c), ga.pick(self.pop, c)))
-                        for _ in range(ga.POP_SIZE - ga.ELITE)]
-            self.pop = np.vstack([elite, children])
+            self.pop = ga.next_generation(self.pop, c)
             self.gen += 1
         self.redraw()
         if self.running:

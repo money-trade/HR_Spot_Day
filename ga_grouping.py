@@ -7,7 +7,8 @@ HERE = Path(__file__).parent                     # อ้างอิงไฟ�
 INPUT = HERE / "Data_sheet" / "HR(in).csv"
 OUTPUT = HERE / "HR_groups.csv"
 POP_SIZE, GENERATIONS, ELITE = 300, 800, 6
-rng = np.random.default_rng(42)
+SEED = 42
+rng = np.random.default_rng(SEED)
 
 # ---------- โหลดข้อมูล
 with open(INPUT, newline="", encoding="utf-8-sig") as f:
@@ -57,29 +58,49 @@ def pick(pop, c):  # tournament selection
     return pop[i[np.argmin(c[i])]]
 
 
-# ---------- วน GA
-pop = np.array([random_individual() for _ in range(POP_SIZE)])
-for gen in range(GENERATIONS):
-    c = cost(pop)
-    if gen % 100 == 0:
-        print(f"gen {gen:4d}  best cost = {c.min():.4f}")
+def next_generation(pop, c):  # elitism + ลูกจาก crossover/mutation (UI.py ใช้ฟังก์ชันนี้ด้วย)
     elite = pop[np.argsort(c)[:ELITE]]
     children = [mutate(crossover(pick(pop, c), pick(pop, c))) for _ in range(POP_SIZE - ELITE)]
-    pop = np.vstack([elite, children])
-best = pop[np.argmin(cost(pop))]
+    return np.vstack([elite, children])
+
+
+# ---------- วน GA
+def run_ga(log=True):
+    pop = np.array([random_individual() for _ in range(POP_SIZE)])
+    for gen in range(GENERATIONS):
+        c = cost(pop)
+        if log and gen % 100 == 0:
+            print(f"gen {gen:4d}  best cost = {c.min():.4f}")
+        pop = next_generation(pop, c)
+    return pop[np.argmin(cost(pop))]
+
 
 # ---------- สรุปผล และบันทึกไฟล์
-print(f"\nbest cost = {cost(best[None])[0]:.4f}")
-for g, name in enumerate(["Red", "Blue"]):
-    m = best == g
-    print(f"{name:<5} n={m.sum()}  ชาย={int(M[m].sum())} หญิง={int((1 - M[m]).sum())}  "
-          f"อายุ={X[m, 0].mean():.1f} น้ำหนัก={X[m, 1].mean():.1f} ส่วนสูง={X[m, 2].mean():.1f}")
-d1 = (best @ D).astype(int)
-print("แผนก (แดง/น้ำเงิน): " + "  ".join(f"{d}:{int(n) - b}/{b}" for d, n, b in zip(depts, dept_n, d1)))
+def summary(best):
+    print(f"\nbest cost = {cost(best[None])[0]:.4f}")
+    for g, name in enumerate(["Red", "Blue"]):
+        m = best == g
+        print(f"{name:<5} n={m.sum()}  ชาย={int(M[m].sum())} หญิง={int((1 - M[m]).sum())}  "
+              f"อายุ={X[m, 0].mean():.1f} น้ำหนัก={X[m, 1].mean():.1f} ส่วนสูง={X[m, 2].mean():.1f}")
+    d1 = (best @ D).astype(int)
+    print("แผนก (แดง/น้ำเงิน): " + "  ".join(f"{d}:{int(n) - b}/{b}" for d, n, b in zip(depts, dept_n, d1)))
 
-with open(OUTPUT, "w", newline="", encoding="utf-8-sig") as f:
-    w = csv.writer(f)
-    w.writerow(["gender", "department", "weight", "height", "age", "group"])
-    for r, g in zip(rows, best):
-        w.writerow([r["gender"], r["department"], r["weight"], r["height"], r["age"], ["Red", "Blue"][g]])
-print("บันทึก HR_groups.csv แล้ว")
+
+def save(best, path=OUTPUT):
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["gender", "department", "weight", "height", "age", "group"])
+        for r, g in zip(rows, best):
+            w.writerow([r["gender"], r["department"], r["weight"], r["height"], r["age"], ["Red", "Blue"][g]])
+    print(f"บันทึก {Path(path).name} แล้ว")
+
+
+def main():
+    best = run_ga()
+    summary(best)
+    save(best)
+
+
+# รัน GA เฉพาะตอนสั่ง python ga_grouping.py ตรง ๆ (import จาก UI.py จะไม่รันซ้ำ และไม่เขียนทับไฟล์ผล)
+if __name__ == "__main__":
+    main()
