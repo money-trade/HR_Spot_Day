@@ -58,6 +58,24 @@ def pick(pop, c):  # tournament selection
     return pop[i[np.argmin(c[i])]]
 
 
+def local_search(ind):
+    """หลัง GA: ลองสลับคนแดง 1 คนกับน้ำเงิน 1 คนทุกคู่ (179 x 179 แบบ) เลือกคู่ที่ cost ลดมากสุด
+    ทำซ้ำจนสลับคู่ไหนก็ไม่ดีขึ้น (hill climbing) GA หาบริเวณที่ดี ส่วนนี้เก็บรายละเอียดสุดท้าย"""
+    ind = ind.copy()
+    cur = cost(ind[None])[0]
+    while True:
+        blue, red = np.flatnonzero(ind == 1), np.flatnonzero(ind == 0)
+        b, r = np.repeat(blue, len(red)), np.tile(red, len(blue))
+        cand = np.repeat(ind[None], len(b), 0)
+        k = np.arange(len(b))
+        cand[k, b], cand[k, r] = 0, 1
+        c = cost(cand)
+        j = int(np.argmin(c))
+        if c[j] >= cur - 1e-12:
+            return ind
+        ind, cur = cand[j], c[j]
+
+
 def next_generation(pop, c):  # elitism + ลูกจาก crossover/mutation (UI.py ใช้ฟังก์ชันนี้ด้วย)
     elite = pop[np.argsort(c)[:ELITE]]
     children = [mutate(crossover(pick(pop, c), pick(pop, c))) for _ in range(POP_SIZE - ELITE)]
@@ -88,7 +106,7 @@ def summary(best):
 
 def save(best, path=OUTPUT):
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["gender", "department", "weight", "height", "age", "group"])
         for r, g in zip(rows, best):
             w.writerow([r["gender"], r["department"], r["weight"], r["height"], r["age"], ["Red", "Blue"][g]])
@@ -97,6 +115,8 @@ def save(best, path=OUTPUT):
 
 def main():
     best = run_ga()
+    print(f"\nGA จบที่ cost = {cost(best[None])[0]:.4f}  -> ปรับต่อด้วย local search")
+    best = local_search(best)
     summary(best)
     save(best)
 
