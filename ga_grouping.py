@@ -1,5 +1,6 @@
 """Genetic Algorithm แบ่งพนักงานเป็น 2 กลุ่ม (แดง/น้ำเงิน) ให้ยุติธรรมและได้รู้จักข้ามแผนก"""
 import csv
+import sys
 from pathlib import Path
 import numpy as np
 
@@ -10,9 +11,44 @@ POP_SIZE, GENERATIONS, ELITE = 300, 800, 6
 SEED = 42
 rng = np.random.default_rng(SEED)
 
-# ---------- โหลดข้อมูล
-with open(INPUT, newline="", encoding="utf-8-sig") as f:
-    rows = [{k.strip(): v.strip() for k, v in r.items()} for r in csv.DictReader(f) if r["gender"]]
+# ---------- โหลดข้อมูล (ตรวจความถูกต้องก่อน แถวที่มีปัญหาจะถูกข้ามและแจ้งเลขแถว)
+REQUIRED = ("gender", "department", "weight", "height", "age")
+GENDERS = ("Male", "Female")
+
+
+def load_rows(path):
+    if not path.exists():
+        sys.exit(f"ไม่พบไฟล์ข้อมูล: {path}")
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        missing = [c for c in REQUIRED if c not in {h.strip() for h in reader.fieldnames or []}]
+        if missing:
+            sys.exit(f"ไฟล์ {path.name} ไม่มีคอลัมน์: {', '.join(missing)}")
+        rows, skipped = [], []
+        for line, raw in enumerate(reader, start=2):  # แถวที่ 1 คือหัวตาราง
+            r = {k.strip(): (v or "").strip() for k, v in raw.items() if k}
+            if not any(r.values()):
+                continue  # แถวว่าง
+            if r["gender"] not in GENDERS:
+                skipped.append(f"แถว {line}: gender = '{r['gender']}' (ต้องเป็น Male หรือ Female)")
+            elif not r["department"]:
+                skipped.append(f"แถว {line}: ไม่มี department")
+            else:
+                try:
+                    [float(r[c]) for c in ("age", "weight", "height")]
+                    rows.append(r)
+                except ValueError:
+                    skipped.append(f"แถว {line}: อายุ/น้ำหนัก/ส่วนสูง ไม่ใช่ตัวเลข")
+    if skipped:
+        print(f"ข้าม {len(skipped)} แถวที่ข้อมูลไม่ครบหรือผิดรูปแบบ:")
+        for s in skipped:
+            print("  " + s)
+    if len(rows) % 2:
+        print(f"เตือน: มี {len(rows)} คน (เลขคี่) กลุ่มแดงจะมากกว่ากลุ่มน้ำเงิน 1 คน")
+    return rows
+
+
+rows = load_rows(INPUT)
 N, HALF = len(rows), len(rows) // 2
 depts = sorted({r["department"] for r in rows})
 D = np.array([[r["department"] == d for d in depts] for r in rows], float)  # one-hot แผนก
