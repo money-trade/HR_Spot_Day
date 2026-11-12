@@ -149,6 +149,22 @@ def save(best, path=OUTPUT):
     print(f"บันทึก {Path(path).name} แล้ว")
 
 
+def load_groups(path=OUTPUT):
+    """อ่านผลเดิมจาก HR_groups.csv กลับมาเป็นโครโมโซม (None ถ้าไม่มีไฟล์หรือข้อมูลไม่ตรงกับ HR(in).csv)"""
+    if not Path(path).exists():
+        return None
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        saved = list(csv.DictReader(f))
+    if len(saved) != N:
+        return None
+    ind = np.zeros(N, np.int8)
+    for i, (r, s) in enumerate(zip(rows, saved)):
+        if any(r[c] != s.get(c, "").strip() for c in REQUIRED) or s.get("group") not in ("Red", "Blue"):
+            return None
+        ind[i] = s["group"] == "Blue"
+    return ind
+
+
 def main():
     best = run_ga()
     print(f"\nGA จบที่ cost = {cost(best[None])[0]:.4f}  -> ปรับต่อด้วย local search")
