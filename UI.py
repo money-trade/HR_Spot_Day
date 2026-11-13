@@ -44,6 +44,8 @@ class App(tk.Tk):
         top.pack(fill="x", padx=10, pady=8)
         self.btn = tk.Button(top, text="รัน GA ใหม่", command=self.start)
         self.btn.pack(side="left")
+        self.save_btn = tk.Button(top, text="บันทึกผลลง HR_groups.csv", command=self.save)
+        self.save_btn.pack(side="left", padx=(6, 0))
         for name, col in (("■ กลุ่มแดง", RED), ("■ กลุ่มน้ำเงิน", BLUE)):
             tk.Label(top, text=name, fg=col, font=(FONT, 10)).pack(side="left", padx=6)
         self.status = tk.Label(top, font=(FONT, 10))
@@ -63,21 +65,29 @@ class App(tk.Tk):
         grid.columnconfigure((0, 1), weight=1)
         grid.rowconfigure((0, 1), weight=1)
 
-        # ใช้ผลที่ ga_grouping.py คำนวณไว้ตอน import ถ้าไม่มีก็รันใหม่
-        self.history, self.running, self.gen = [], False, ga.GENERATIONS
-        if hasattr(ga, "best"):
-            self.best = ga.best.copy()
+        # ถ้ามีผลเดิมใน HR_groups.csv แสดงทันที ไม่ต้องรอ ถ้าไม่มีให้เริ่มรัน GA เอง
+        self.history, self.running, self.gen = [], False, 0
+        saved = ga.load_groups()
+        if saved is not None:
+            self.best, self.note = saved, "แสดงผลจาก HR_groups.csv (กด “รัน GA ใหม่” เพื่อคำนวณใหม่)"
+            self.after(100, self.redraw)
         else:
-            self.best = ga.random_individual()
+            self.best, self.note = ga.random_individual(), ""
             self.after(100, self.start)
+
+    def save(self):
+        ga.save(self.best)
+        self.note = "บันทึกลง HR_groups.csv แล้ว"
+        self.redraw()
 
     # ---------- รัน GA (ลูปเดียวกับ ga_grouping.py) ทีละ 5 รุ่น ให้หน้าจอไม่ค้าง
     def start(self):
         if self.running:
             return
-        self.running, self.gen, self.history = True, 0, []
+        self.running, self.gen, self.history, self.note = True, 0, [], ""
         self.pop = np.array([ga.random_individual() for _ in range(ga.POP_SIZE)])
         self.btn.config(state="disabled")
+        self.save_btn.config(state="disabled")
         self.step()
 
     def step(self):
@@ -86,13 +96,14 @@ class App(tk.Tk):
             self.history.append(c.min())
             self.best = self.pop[np.argmin(c)].copy()
             if self.gen == ga.GENERATIONS:
+                # จบ GA แล้วเก็บรายละเอียดด้วย local search เหมือน ga_grouping.py
+                self.best = ga.local_search(self.best)
+                self.note = f"GA {c.min():.4f} → local search"
                 self.running = False
                 self.btn.config(state="normal")
+                self.save_btn.config(state="normal")
                 break
-            elite = self.pop[np.argsort(c)[:ga.ELITE]]
-            children = [ga.mutate(ga.crossover(ga.pick(self.pop, c), ga.pick(self.pop, c)))
-                        for _ in range(ga.POP_SIZE - ga.ELITE)]
-            self.pop = np.vstack([elite, children])
+            self.pop = ga.next_generation(self.pop, c)
             self.gen += 1
         self.redraw()
         if self.running:
@@ -101,7 +112,8 @@ class App(tk.Tk):
     # ---------- วาดกราฟ
     def redraw(self):
         cost = ga.cost(self.best[None])[0]
-        self.status.config(text=f"รุ่น {self.gen}/{ga.GENERATIONS}   best cost = {cost:.4f}")
+        gen = f"รุ่น {self.gen}/{ga.GENERATIONS}   " if self.history else ""
+        self.status.config(text=f"{gen}best cost = {cost:.4f}   {self.note}")
         for k in range(len(self.charts)):
             self.draw(k)
 

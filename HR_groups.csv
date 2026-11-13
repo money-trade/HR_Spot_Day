@@ -1,7 +1,7 @@
 ﻿gender,department,weight,height,age,group
 Male,R,89,172,32,Red
 Male,R,89,180,52,Red
-Male,R,52,158,27,Red
+Male,R,52,158,27,Blue
 Male,R,50,157,39,Red
 Male,R,68,174,25,Red
 Male,R,62,164,29,Blue
@@ -83,7 +83,7 @@ Female,O,75,168,41,Red
 Male,O,75,176,53,Red
 Male,O,70,165,28,Blue
 Male,O,71,165,40,Blue
-Male,O,64,160,45,Blue
+Male,O,64,160,45,Red
 Female,O,67,163,44,Blue
 Male,O,93,183,34,Blue
 Male,O,79,166,28,Blue
@@ -145,7 +145,7 @@ Male,D,57,157,44,Red
 Female,D,76,169,40,Red
 Female,D,92,180,41,Blue
 Male,D,48,149,56,Red
-Female,D,85,174,59,Blue
+Female,D,85,174,59,Red
 Female,D,61,164,55,Red
 Female,D,89,180,55,Red
 Female,D,84,175,51,Red
@@ -186,13 +186,13 @@ Female,D,99,188,46,Blue
 Female,D,84,179,58,Blue
 Female,D,61,162,59,Red
 Female,D,79,173,28,Red
-Male,D,66,170,38,Red
+Male,D,66,170,38,Blue
 Female,D,95,176,31,Red
-Male,D,69,165,35,Blue
+Male,D,69,165,35,Red
 Female,D,67,166,58,Blue
 Female,D,83,175,38,Blue
 Female,D,90,183,29,Blue
-Female,D,82,175,58,Red
+Female,D,82,175,58,Blue
 Female,D,39,152,36,Blue
 Male,D,47,157,51,Blue
 Female,D,93,174,33,Red
